@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Minero</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .card {
+            margin-bottom: 20px;
+        }
+        .sensor-card {
+            border-left: 4px solid #007bff;
+        }
+        .measurement-card {
+            border-left: 4px solid #28a745;
+        }
+        .alert-card {
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">Sistema de Monitoreo Minero</span>
+            <div>
+                <a href="dashboard.html" class="btn btn-light me-2">Dashboard</a>
+                <a href="ajustes.html" class="btn btn-outline-light me-2">Ajustes</a>
+                <button onclick="logout()" class="btn btn-danger">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Add this function to your script section -->
+    <script>
+        function logout() {
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('userRole');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="container mt-4">
+        <div id="areasContainer"></div>
+    </div>
+
+    <script>
+        // Add at the beginning of your script
+        if (!localStorage.getItem('userToken')) {
+            window.location.href = 'login.html';
+        }
+
+        // Show/hide settings button based on role
+        const userRole = localStorage.getItem('userRole');
+        if (userRole !== 'admin') {
+            document.querySelector('a[href="ajustes.html"]').style.display = 'none';
+        }
+
+        // Update your fetch calls to include the token
+        let sensores = []; // Declare this once at the top of your script
+
+        async function fetchData() {
+            try {
+                const token = localStorage.getItem('userToken');
+                if (!token) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Fetch all data in parallel with error handling for each request
+                const [areasRes, sensoresRes, medicionesRes, alertasRes] = await Promise.all([
+                    fetch('https://apisensoresmina-production.up.railway.app/api/areas', { 
+                        method: 'GET',
+                        headers 
+                    }),
+                    fetch('https://apisensoresmina-production.up.railway.app/api/sensores', { 
+                        method: 'GET',
+                        headers 
+                    }),
+                    fetch('https://apisensoresmina-production.up.railway.app/api/mediciones', { 
+                        method: 'GET',
+                        headers 
+                    }),
+                    fetch('https://apisensoresmina-production.up.railway.app/api/alertas', { 
+                        method: 'GET',
+                        headers 
+                    })
+                ]);
+
+                // Check if responses are ok
+                if (!areasRes.ok) throw new Error('Error fetching areas');
+                if (!sensoresRes.ok) throw new Error('Error fetching sensors');
+                if (!medicionesRes.ok) throw new Error('Error fetching measurements');
+                if (!alertasRes.ok) throw new Error('Error fetching alerts');
+
+                // Parse responses
+                const areas = await areasRes.json();
+                const sensores = await sensoresRes.json();
+                const mediciones = await medicionesRes.json();
+                const alertas = await alertasRes.json();
+
+                // Verify data structure
+                if (!Array.isArray(areas)) throw new Error('Invalid areas data format');
+                if (!Array.isArray(sensores)) throw new Error('Invalid sensors data format');
+                if (!Array.isArray(mediciones)) throw new Error('Invalid measurements data format');
+                if (!Array.isArray(alertas)) throw new Error('Invalid alerts data format');
+
+                displayData(areas, sensores, mediciones, alertas);
+
+                // Llamado cada 10 segundos
+                setTimeout(fetchData, 10000);
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('areasContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4 class="alert-heading">Error de conexión</h4>
+                        <p>${error.message}</p>
+                        <hr>
+                        <p class="mb-0">Error al conectar con el servidor</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Remove this extra closing brace that was causing the error
+        // }
+
+        function displayData(areas, sensores, mediciones, alertas) {
+            const container = document.getElementById('areasContainer');
+            container.innerHTML = '';
+
+            if (!areas || areas.length === 0) {
+                container.innerHTML = '<p class="text-muted">No hay áreas disponibles</p>';
+                return;
+            }
+
+            areas.forEach(area => {
+                const areaSensores = sensores.filter(s => s.area_id === area.id);
+                const areaMediciones = mediciones.filter(m => m.area_id === area.id);
+                // Modified alert filtering to include all sensor types
+                const areaAlertas = alertas.filter(a => {
+                    const sensor = areaSensores.find(s => s.id === a.sensor_id);
+                    return sensor !== undefined;
+                });
+
+                const areaSection = document.createElement('div');
+                areaSection.className = 'mb-5';
+                areaSection.innerHTML = `
+                    <h2 class="mb-4">${area.nombre_area}</h2>
+                    <p class="text-muted">${area.descripcion || 'Sin descripción'}</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card sensor-card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Sensores</h5>
+                                </div>
+                                <div class="card-body">
+                                    ${getSensoresHTML(areaSensores)}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card measurement-card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Mediciones</h5>
+                                </div>
+                                <div class="card-body">
+                                    ${getMedicionesHTML(areaMediciones)}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card alert-card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Alertas</h5>
+                                </div>
+                                <div class="card-body">
+                                    ${getAlertasHTML(areaAlertas)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(areaSection);
+            });
+        }
+
+        function getSensoresHTML(sensores) {
+            if (sensores.length === 0) return '<p>No hay sensores registrados</p>';
+            
+            return sensores.map(sensor => `
+                <div class="mb-3">
+                    <h6>${sensor.nombre_sensor}</h6>
+                    <p class="mb-1">Ubicación: ${sensor.ubicacion}</p>
+                    <p class="mb-1">Tipo: ${sensor.tipo_sensor}</p>
+                    <p class="mb-1">Umbrales: ${sensor.umbral_min} - ${sensor.umbral_max} 
+                        ${sensor.tipo_sensor === 'temperatura' ? '°C' : 
+                          sensor.tipo_sensor === 'velocidad' ? 'm/s' : 
+                          sensor.tipo_sensor === 'caudal' ? 'm³/s' : ''}</p>
+                </div>
+            `).join('');
+        }
+
+        function getMedicionesHTML(mediciones) {
+            if (mediciones.length === 0) return '<p>No hay mediciones registradas</p>';
+            
+            return mediciones.map(medicion => {
+                const exceedsThreshold = (value, sensor) => {
+                    return value < sensor.umbral_min || value > sensor.umbral_max;
+                };
+
+                return `
+                    <div class="mb-3">
+                        <p class="mb-1 ${exceedsThreshold(medicion.temperature, 'temperatura') ? 'text-danger' : ''}">
+                            Temperatura: ${medicion.temperature || 'N/A'}°C
+                        </p>
+                        <p class="mb-1 ${exceedsThreshold(medicion.velocity, 'velocidad') ? 'text-danger' : ''}">
+                            Velocidad: ${medicion.velocity || 'N/A'} m/s
+                        </p>
+                        <p class="mb-1 ${exceedsThreshold(medicion.flow, 'caudal') ? 'text-danger' : ''}">
+                            Caudal: ${medicion.flow || 'N/A'} m³/s
+                        </p>
+                        <small class="text-muted">Fecha: ${new Date(medicion.timestamp).toLocaleString()}</small>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getAlertasHTML(alertas) {
+            if (alertas.length === 0) return '<p>No hay alertas activas</p>';
+            
+            return alertas.map(alerta => `
+                <div class="alert ${alerta.estado === 'activa' ? 'alert-danger' : 'alert-warning'} mb-2">
+                    <p class="mb-1">${alerta.descripcion}</p>
+                    <p class="mb-1">Estado: ${alerta.estado}</p>
+                    <small class="text-muted">Fecha: ${new Date(alerta.marca_temporal).toLocaleString()}</small>
+                </div>
+            `).join('');
+        }
+
+        // Fetch data initially
+        fetchData();
+
+        // Refresh data every 30 seconds
+        setInterval(fetchData, 30000);
+        </script>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+</html>
