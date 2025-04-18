@@ -37,7 +37,7 @@
         function logout() {
             localStorage.removeItem('userToken');
             localStorage.removeItem('userRole');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
     </script>
 
@@ -48,7 +48,7 @@
     <script>
         // Add at the beginning of your script
         if (!localStorage.getItem('userToken')) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
 
         // Show/hide settings button based on role
@@ -64,7 +64,7 @@
             try {
                 const token = localStorage.getItem('userToken');
                 if (!token) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 
