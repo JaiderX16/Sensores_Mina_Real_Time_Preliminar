@@ -37,12 +37,12 @@
         function logout() {
             localStorage.removeItem('userToken');
             localStorage.removeItem('userRole');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
     
         // Add this at the beginning of your script
         if (!localStorage.getItem('userToken')) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
             throw new Error('No authentication token found');
         }
 

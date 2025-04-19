@@ -104,7 +104,7 @@
     <script>
         // Check authentication and admin role
         if (!localStorage.getItem('userToken')) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
             throw new Error('No authentication token found');
         }
 
@@ -116,7 +116,7 @@
         function logout() {
             localStorage.removeItem('userToken');
             localStorage.removeItem('userRole');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
 
         // Remove the second loadUsers function (around line 428) and keep only this one at the beginning
@@ -124,7 +124,7 @@
             try {
                 const token = localStorage.getItem('userToken');
                 if (!token) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 
@@ -296,7 +296,7 @@
                 const token = localStorage.getItem('userToken');
                 if (!token) {
                     alert('Sesión expirada. Por favor, inicie sesión nuevamente.');
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
         
@@ -336,7 +336,7 @@
                 const token = localStorage.getItem('userToken');
                 if (!token) {
                     alert('Sesión expirada. Por favor, inicie sesión nuevamente.');
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 

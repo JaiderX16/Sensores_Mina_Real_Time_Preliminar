@@ -84,7 +84,7 @@
     <script>
         // Check authentication and admin role
         if (!localStorage.getItem('userToken')) {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
             throw new Error('No authentication token found');
         }
 
@@ -96,7 +96,7 @@
         function logout() {
             localStorage.removeItem('userToken');
             localStorage.removeItem('userRole');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
 
         // Load user data when page loads
@@ -113,7 +113,7 @@
             try {
                 const token = localStorage.getItem('userToken');
                 if (!token) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 
